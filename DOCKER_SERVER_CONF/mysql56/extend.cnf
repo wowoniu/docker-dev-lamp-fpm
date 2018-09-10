@@ -1,0 +1,6 @@
+
+[mysqld]
+lower_case_table_names=1
+
+general_log=ON
+general_log_file=/data/mysql.log

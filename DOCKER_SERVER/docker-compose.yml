@@ -1,0 +1,151 @@
+version: "2"
+services: 
+    apache-server:
+        image: httpd:2.4
+        expose:
+           - 80
+           - 443
+        ##################注意：端口为9090 可更改为 80######################
+        ports:
+           - 80:80
+           - 443:443
+        volumes:
+           - D:/DOCKER/DOCKER_SERVER_CONF/apache/httpd-vhosts.conf:/usr/local/apache2/conf/extra/httpd-vhosts.conf
+           - D:/DOCKER/DOCKER_SERVER_CONF/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf
+           - D:/DOCKER/DOCKER_SERVER_CONF/apache/httpd-ssl.conf:/usr/local/apache2/conf/extra/httpd-ssl.conf
+        volumes_from:
+           - data-web-www
+        links:
+           - phpfpm-server-7.0.30:phpfpm-server-70
+           - phpfpm-server-5.6.36:phpfpm-server-56
+           - phpfpm-server-5.4.45:phpfpm-server-45
+
+    nginx-server:
+        image: nginx
+        expose:
+           - 80
+        ##################注意：端口为9090 可更改为 80######################
+        ports:
+           - 8080:80
+        volumes:
+           - D:/DOCKER/DOCKER_SERVER_CONF/nginx/nginx.conf:/etc/nginx/nginx.conf
+           - D:/DOCKER/DOCKER_SERVER_CONF/nginx/vhosts:/etc/nginx/conf.d/
+           #- /home/qiang/vboxshare/server_log/nginx_log:/var/log/nginx
+        volumes_from:
+           - data-web-www
+        links:
+           - phpfpm-server-7.0.30:phpfpm-server-7.0.30
+           - phpfpm-server-5.6.36:phpfpm-server-5.6.36
+        command: [nginx-debug, '-g', 'daemon off;']
+    phpfpm-server-7.0.30:
+        image: zhiqiangvip/docker-php-7.0.30-fpm
+        expose:
+           - 9000
+        #   - 9566
+        #ports:
+        #   - 9566:9566
+        ##################PHP-FPM 配置文件######################
+        volumes:
+           - D:/DOCKER/DOCKER_SERVER_CONF/php7.0.30-fpm/php-fpm.conf:/usr/local/etc/php-fpm.conf
+           - D:/DOCKER/DOCKER_SERVER_CONF/php7.0.30-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf
+           - D:/DOCKER/DOCKER_SERVER_CONF/php7.0.30-fpm/php.ini:/usr/local/etc/php/conf.d/php.ini
+        volumes_from:
+           - data-web-www
+        links:
+           - mysql-server-5.5:mysql-server-5.5
+           - mysql-server-5.6:mysql-server-5.6
+           - redis-server:redis-server
+    phpfpm-server-5.6.36:
+            image: zhiqiangvip/docker-php-5.6.36-fpm
+            expose:
+               - 9000
+            #ports:
+            #   - 9000:9000
+            ##################PHP-FPM 配置文件######################
+            volumes:
+               - D:/DOCKER/DOCKER_SERVER_CONF/php5.6.36-fpm/php-fpm.conf:/usr/local/etc/php-fpm.conf
+               - D:/DOCKER/DOCKER_SERVER_CONF/php5.6.36-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf
+               - D:/DOCKER/DOCKER_SERVER_CONF/php5.6.36-fpm/php.ini:/usr/local/etc/php/conf.d/php.ini
+            volumes_from:
+               - data-web-www
+            links:
+               - mysql-server-5.5:mysql-server-5.5
+               - mysql-server-5.6:mysql-server-5.6
+               - redis-server:redis-server
+               - memcache-server:memcache-server
+    phpfpm-server-5.4.45:
+                image: zhiqiangvip/docker-php-5.4.45-fpm
+                expose:
+                   - 9000
+                ##################PHP-FPM 配置文件######################
+                volumes:
+                   - D:/DOCKER/DOCKER_SERVER_CONF/php5.4.45-fpm/php-fpm.conf:/usr/local/etc/php-fpm.conf
+#                   - D:/DOCKER/DOCKER_SERVER_CONF/php5.4.45-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf
+                   - D:/DOCKER/DOCKER_SERVER_CONF/php5.4.45-fpm/www.conf:/usr/local/etc/php-fpm.d/zz-docker.conf
+                   - D:/DOCKER/DOCKER_SERVER_CONF/php5.4.45-fpm/php.ini:/usr/local/etc/php/conf.d/php.ini
+                volumes_from:
+                   - data-web-www
+                links:
+                   - mysql-server-5.5:mysql-server-5.5
+                   - mysql-server-5.6:mysql-server-5.6
+                   - redis-server:redis-server
+                   - memcache-server:memcache-server
+    mysql-server-5.5:
+        image: zhiqiangvip/docker-mysql5.5
+        expose:
+           - 3306
+        ports:
+           - 33066:3306
+        environment:
+           - MYSQL_PASS=123456
+        volumes:
+           - D:/VboxShare/server_data/mysql_db:/data
+    mysql-server-5.6:
+            image: zhiqiangvip/docker-mysql5.6
+            expose:
+               - 3306
+            ports:
+               - 3306:3306
+            environment:
+               - MYSQL_PASS=123456
+            #################配置数据库文件挂载目录######################
+            volumes:
+               - D:/VboxShare/server_data/mysql56_db:/data
+               - D:/DOCKER/DOCKER_SERVER_CONF/mysql56/extend.cnf:/etc/mysql/conf.d/extend.cnf
+    redis-server:
+            image: redis:3-alpine
+            volumes:
+               - D:/VboxShare/server_data/redis_db:/data
+               - D:/DOCKER/DOCKER_SERVER_CONF/redis3.2/redis.conf:/usr/local/etc/redis/redis.conf
+            command: redis-server /usr/local/etc/redis/redis.conf
+            expose:
+               - 6379
+            ports:
+               - 6379:6379
+    memcache-server:
+            image: zhiqiangvip/docker-memcache
+            expose:
+               - 11211
+            ports:
+               - 11211:11211
+            #volumes:
+            #   - /etc/localtime:/etc/localtime:ro
+    dnsmasq-server:
+            image: zhiqiangvip/docker-dnsmasq
+            expose:
+              - 53
+            ports:
+              - 53:53/udp
+              - 8083:8080
+            volumes:
+              - D:/DOCKER/DOCKER_SERVER_CONF/dnsmasq/dnsmasq_base.conf:/etc/dnsmasq.d/dnsmasq_base.conf
+              - D:/DOCKER/DOCKER_SERVER_CONF/dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf
+            environment:
+              - HTTP_USER:admin
+              - HTTP_PASS:123456
+            restart: always
+    data-web-www:
+        image: alpine
+        ###################配置网站www目录挂载目录######################
+        volumes: 
+           - D:/VboxShare/server_data/web_www:/data
